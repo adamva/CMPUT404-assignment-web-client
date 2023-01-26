@@ -67,8 +67,11 @@ class HTTPClient(object):
         return (host, port)
 
     def connect(self, host, port):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((host, port))
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.connect((host, port))
+        except socket.error as e:
+            raise e
         return None
 
     def get_code(self, data):
