@@ -33,9 +33,9 @@ class HTTPResponse(object):
         self.code = code
         self.headers = headers
         self.body = body
+    def get_code(self): return self.code
     def get_body(self): return self.body
     def get_headers(self): return self.headers
-    def get_code(self): return self.code
 
 class HTTPClient(object):
     def get_host_port(self, url):
@@ -62,8 +62,9 @@ class HTTPClient(object):
         if port == 0:
             if url.startswith('http:'):
                 port = 80
-            elif url.startswith('https:'):
-                port = 443
+            # TODO Raise exception for https attempts
+            # elif url.startswith('https:'):
+                # port = 443
 
         # TODO Check if host or port still are not set
         return (host, port)
@@ -95,7 +96,11 @@ class HTTPClient(object):
         return None
     
     def sendall(self, data):
-        self.socket.sendall(data.encode('utf-8'))
+        try:
+            self.socket.sendall(data.encode('utf-8'))
+        except socket.error as e:
+            raise e
+        return None
         
     def close(self):
         self.socket.close()
@@ -129,9 +134,9 @@ class HTTPClient(object):
         # Read response
         # TODO Response is empty when trying www.google.com
         http_response_data = self.recvall(self.socket)
-        body = self.get_body(http_response_data)
         code = self.get_code(http_response_data)
         headers = self.get_headers(http_response_data)
+        body = self.get_body(http_response_data)
 
         return HTTPResponse(code, headers, body)
 
