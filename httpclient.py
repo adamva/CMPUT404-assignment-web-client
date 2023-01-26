@@ -34,7 +34,35 @@ class HTTPResponse(object):
         self.body = body
 
 class HTTPClient(object):
-    #def get_host_port(self,url):
+    def get_host_port(self, url):
+        """ Return the hostname and port from a URL string
+
+        Parameters:
+            url (string): A HTTP URL string
+        
+        Returns:
+            (host, port) (tuple): A tuple containing the host and port
+        """
+        port = 0
+        host = ''
+        # Check URL for hostname and optional port
+        url_arr = url.split('/') # ['http', '', 'localhost:8080', 'index.html']
+        if len(url_arr) > 2:
+            host_port = url_arr[2] 
+            host_port_arr = host_port.split(':') # ['localhost', '8080']
+            if len(host_port_arr) > 1:
+                port = host_port_arr[1]
+            host = host_port_arr[0]
+    
+        # HTTP schemes have standard ports
+        if port == 0:
+            if url.startswith('http:'):
+                port = 80
+            elif url.startswith('https:'):
+                port = 443
+
+        # TODO Check if host or port still are not set
+        return (host, port)
 
     def connect(self, host, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,6 +99,8 @@ class HTTPClient(object):
     def GET(self, url, args=None):
         code = 500
         body = ""
+        server_host, server_port = self.get_host_port(url)
+        self.connect(server_host, server_port)
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
