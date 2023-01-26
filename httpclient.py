@@ -29,10 +29,12 @@ def help():
     print("httpclient.py [GET/POST] [URL]\n")
 
 class HTTPResponse(object):
-    def __init__(self, code=200, body=""):
+    def __init__(self, code=200, headers={}, body=""):
         self.code = code
+        self.headers = headers
         self.body = body
     def get_body(self): return self.body
+    def get_headers(self): return self.headers
     def get_code(self): return self.code
 
 class HTTPClient(object):
@@ -53,7 +55,7 @@ class HTTPClient(object):
             host_port = url_arr[2] 
             host_port_arr = host_port.split(':') # ['localhost', '8080']
             if len(host_port_arr) > 1:
-                port = host_port_arr[1]
+                port = int(host_port_arr[1])
             host = host_port_arr[0]
     
         # HTTP schemes have standard ports
@@ -65,6 +67,15 @@ class HTTPClient(object):
 
         # TODO Check if host or port still are not set
         return (host, port)
+
+    def get_path(self, url):
+        path = '/'
+        url_arr = url.split('/') # ['http', '', 'localhost:8080', 'index.html']
+        if len(url_arr) > 3:
+            path += url_arr[3]
+        
+        # TODO Check if path is not set
+        return path
 
     def connect(self, host, port):
         try:
@@ -104,9 +115,25 @@ class HTTPClient(object):
     def GET(self, url, args=None):
         code = 500
         body = ""
+        # Build HTTP request body
         server_host, server_port = self.get_host_port(url)
+        request_path = self.get_path(url)
+        # GET / HTTP/1.1\nHost: localhost\n\n
+        http_request_data = 'GET ' + request_path + ' HTTP/1.0\nHost: ' + server_host + '\n\n'
+
+        # Connect & send request
         self.connect(server_host, server_port)
-        return HTTPResponse(code, body)
+        self.sendall(http_request_data)
+        self.socket.shutdown(socket.SHUT_WR)
+        
+        # Read response
+        # TODO Response is empty when trying www.google.com
+        http_response_data = self.recvall(self.socket)
+        body = self.get_body(http_response_data)
+        code = self.get_code(http_response_data)
+        headers = self.get_headers(http_response_data)
+
+        return HTTPResponse(code, headers, body)
 
     def POST(self, url, args=None):
         code = 500
