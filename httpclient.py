@@ -87,6 +87,14 @@ class HTTPClient(object):
         return None
 
     def get_code(self, data):
+        """ Return HTTP code from HTTP reponse data
+
+        Parameters:
+            data (string): A HTTP response string
+
+        Returns:
+            code (int): An int of the HTTP response code
+        """
         code = -1
         status_line_end_index = data.find('\n')
         status_line = data[0:status_line_end_index]
@@ -95,6 +103,7 @@ class HTTPClient(object):
             code = split_status_line[1]
         else:
             raise Exception('ERR Response status line is malformed')
+        # TODO check if response code is out of band (<100 or >599)
         return code
 
     def get_headers(self,data):
