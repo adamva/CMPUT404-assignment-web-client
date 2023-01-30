@@ -147,11 +147,14 @@ class HTTPClient(object):
         headers = self.get_headers(http_response_data)
         body = self.get_body(http_response_data)
 
+        self.close()
         return HTTPResponse(code, headers, body)
 
     def POST(self, url, args=None):
         code = 500
         body = ""
+
+        self.close()
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
