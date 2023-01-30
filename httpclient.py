@@ -87,7 +87,15 @@ class HTTPClient(object):
         return None
 
     def get_code(self, data):
-        return None
+        code = -1
+        status_line_end_index = data.find('\n')
+        status_line = data[0:status_line_end_index]
+        split_status_line = status_line.split(' ') # ['HTTP/1.0', '200', 'OK']
+        if len(split_status_line) >= 2: 
+            code = split_status_line[1]
+        else:
+            raise Exception('ERR Response status line is malformed')
+        return code
 
     def get_headers(self,data):
         return None
@@ -134,6 +142,7 @@ class HTTPClient(object):
         # Read response
         # TODO Response is empty when trying www.google.com
         http_response_data = self.recvall(self.socket)
+        # TODO Break out if response does not start with HTTP
         code = self.get_code(http_response_data)
         headers = self.get_headers(http_response_data)
         body = self.get_body(http_response_data)
@@ -162,6 +171,11 @@ if __name__ == "__main__":
         http_rsp = client.command( sys.argv[2], sys.argv[1] )
     else:
         http_rsp = client.command( sys.argv[1] )
+    print("RSP Code:")
+    print(http_rsp.get_code())
+    print("RSP Headers:")
+    print(http_rsp.get_headers())
+    print("RSP Body:")
     print(http_rsp.get_body())
     
 
