@@ -106,7 +106,13 @@ class HTTPClient(object):
         # TODO check if response code is out of band (<100 or >599)
         return code
 
-    def get_headers(self,data):
+    def get_headers(self, data):
+        headers = []
+        # First new line indicates end of status line
+        status_line_end_index = data.find('\n')
+        # First double new line indicates start of message body
+        message_body_start_index = data.find('\n\n')
+        headers_data = data[status_line_end_index+1:message_body_start_index]
         return None
 
     def get_body(self, data):
