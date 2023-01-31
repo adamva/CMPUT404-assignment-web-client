@@ -53,6 +53,9 @@ class HTTPClient(object):
         """
         line_ending = '\r\n'
         # TODO some servers want \r or \n or \r\n ... 
+        # http://slashdot.org wants \r
+        # http://softwareprocess.es/static/SoftwareProcess.es.html wants \r\n
+        # http://example.com wants \r\n or \n
         # Create status line
         http_request = f'{method.upper()} {path} HTTP/{version}' + line_ending
 
