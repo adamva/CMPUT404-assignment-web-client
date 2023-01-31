@@ -38,6 +38,38 @@ class HTTPResponse(object):
     def get_headers(self): return self.headers
 
 class HTTPClient(object):
+    def build_http_request(self, method='GET', version='1.0', path='/', headers={}, payload=''):
+        """ Return a HTTP request string
+
+        Parameters:
+            method  (string): HTTP method type
+            version (string): HTTP version
+            path    (string): HTTP request path
+            headers (dict):   Dictionary of HTTP request headers
+            payload (string): String of request payload
+        
+        Returns:
+            http_request (string): A HTTP request string
+        """
+        # Create status line
+        http_request = f'{method} {path} HTTP/{version}' + '\n'
+        
+        # Append headers
+        if not headers.get('Host'):
+            print("TODO ERROR")
+        for header in headers:
+            http_request += f'{header}: {headers[header]}' + '\n'
+        
+        # Append content-length if not done prior
+        payload_length = len(payload.encode('utf-8'))
+        if payload_length > 0 and not headers.get('Content-Length'):
+            http_request += f'Content-Length: {payload_length}' + '\n'
+        http_request += '\n'
+
+        # Append message body
+        http_request += payload
+        return http_request
+
     def get_host_port(self, url):
         """ Return the hostname and port from a URL string
 
@@ -195,8 +227,8 @@ class HTTPClient(object):
         server_host, server_port = self.get_host_port(url)
         request_path = self.get_path(url)
         # GET / HTTP/1.1\nHost: localhost\n\n
-        http_request_data = 'GET ' + request_path + ' HTTP/1.0\nHost: ' + server_host + '\n\n'
-
+        request_headers = {'Host': server_host}
+        http_request_data = self.build_http_request(path=request_path, headers=request_headers)
         # Connect & send request
         self.connect(server_host, server_port)
         self.sendall(http_request_data)
