@@ -47,7 +47,7 @@ class HTTPClient(object):
         Returns:
             (host, port) (tuple): A tuple containing the host and port
         """
-        port = 0
+        port = -1
         host = ''
         # Check URL for hostname and optional port
         url_arr = url.split('/') # ['http', '', 'localhost:8080', 'index.html']
@@ -59,7 +59,7 @@ class HTTPClient(object):
             host = host_port_arr[0]
     
         # HTTP schemes have standard ports
-        if port == 0:
+        if port == -1:
             if url.startswith('http:'):
                 port = 80
             # TODO Raise exception for https attempts
@@ -118,6 +118,14 @@ class HTTPClient(object):
         return code
 
     def get_headers(self, data):
+        """ Return HTTP headers from HTTP reponse data
+
+        Parameters:
+            data (string): A HTTP response string
+
+        Returns:
+            headers (dict): An dict of the HTTP headers key value pairs
+        """
         headers = {}
         # Split headers on newline and double newline cadence
         line_ending = self.get_line_ending(data)
@@ -207,11 +215,8 @@ if __name__ == "__main__":
         http_rsp = client.command( sys.argv[2], sys.argv[1] )
     else:
         http_rsp = client.command( sys.argv[1] )
-    print("RSP Code:")
-    print(http_rsp.get_code())
-    print("RSP Headers:")
-    print(http_rsp.get_headers())
-    print("RSP Body:")
-    print(http_rsp.get_body())
+    print("RSP Code:", http_rsp.get_code())
+    print("RSP Headers:", http_rsp.get_headers())
+    print("RSP Body:", http_rsp.get_body())
     
 
