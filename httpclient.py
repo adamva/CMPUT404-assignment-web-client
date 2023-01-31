@@ -147,7 +147,8 @@ class HTTPClient(object):
             code (int): An int of the HTTP response code
         """
         code = -1
-        status_line_end_index = data.find('\n')
+        line_ending = self.get_line_ending(data)
+        status_line_end_index = data.find(line_ending)
         status_line = data[0:status_line_end_index]
         split_status_line = status_line.split(' ') # ['HTTP/1.0', '200', 'OK']
         if len(split_status_line) >= 2: 
