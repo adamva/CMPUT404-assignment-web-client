@@ -52,6 +52,7 @@ class HTTPClient(object):
             http_request (string): A HTTP request string
         """
         line_ending = '\r\n'
+        # TODO some servers want \r or \n or \r\n ... 
         # Create status line
         http_request = f'{method.upper()} {path} HTTP/{version}' + line_ending
 
@@ -233,13 +234,13 @@ class HTTPClient(object):
     def GET(self, url, args=None):
         code = 500
         body = ""
+        headers = {}
         # Build HTTP request body
         server_host, server_port = self.get_host_port(url)
         request_path = self.get_path(url)
         # GET / HTTP/1.1\nHost: localhost\n\n
-        request_headers = {'Host': server_host}
-        http_request_data = self.build_http_request(path=request_path, headers=request_headers)
-        print("XX: " + repr(http_request_data))
+        headers['Host'] = server_host
+        http_request_data = self.build_http_request(path=request_path, headers=headers)
         # Connect & send request
         self.connect(server_host, server_port)
         self.sendall(http_request_data)
@@ -248,10 +249,12 @@ class HTTPClient(object):
         # Read response
         # TODO Response is empty when trying www.google.com
         http_response_data = self.recvall(self.socket)
-        # TODO Break out if response does not start with HTTP
-        code = self.get_code(http_response_data)
-        headers = self.get_headers(http_response_data)
-        body = self.get_body(http_response_data)
+        if http_response_data and http_response_data.startswith('HTTP'):
+            code = self.get_code(http_response_data)
+            headers = self.get_headers(http_response_data)
+            body = self.get_body(http_response_data)
+        else:
+            print("ERR Empty or not-HTTP reply from server")
 
         self.close()
         return HTTPResponse(code, headers, body)
