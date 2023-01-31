@@ -38,7 +38,7 @@ class HTTPResponse(object):
     def get_headers(self): return self.headers
 
 class HTTPClient(object):
-    def build_http_request(self, method='GET', version='1.0', path='/', headers={}, payload=''):
+    def build_http_request(self, method='GET', version='1.1', path='/', headers={}, payload=''):
         """ Return a HTTP request string
 
         Parameters:
@@ -52,22 +52,30 @@ class HTTPClient(object):
             http_request (string): A HTTP request string
         """
         # Create status line
-        http_request = f'{method} {path} HTTP/{version}' + '\n'
-        
+        http_request = f'{method.upper()} {path} HTTP/{version}' + '\n'
+
         # Append headers
         if not headers.get('Host'):
             print("TODO ERROR")
         for header in headers:
             http_request += f'{header}: {headers[header]}' + '\n'
-        
-        # Append content-length if not done prior
+
+        # Append headers if not done prior
+        # Content-Length
         payload_length = len(payload.encode('utf-8'))
         if payload_length > 0 and not headers.get('Content-Length'):
             http_request += f'Content-Length: {payload_length}' + '\n'
-        http_request += '\n'
+        # User-Agent
+        if not headers.get('User-Agent'):
+            http_request += 'User-Agent: discountCurl/0.0.1\n'
+        # Accept
+        if not headers.get('Accept'):
+            http_request += 'Accept: */*\n'
 
         # Append message body
-        http_request += payload
+        http_request += '\n'
+        if payload:
+            http_request += payload
         return http_request
 
     def get_host_port(self, url):
@@ -105,7 +113,7 @@ class HTTPClient(object):
         path = '/'
         url_arr = url.split('/') # ['http', '', 'localhost:8080', 'index.html']
         if len(url_arr) > 3:
-            path += url_arr[3]
+            path += '/'.join(url_arr[3:])
         
         # TODO Check if path is not set
         return path
