@@ -129,9 +129,13 @@ class HTTPClient(object):
         headers = {}
         # Split headers on newline and double newline cadence
         line_ending = self.get_line_ending(data)
-        status_line_end_index = data.find(line_ending) + len(line_ending)
+        status_line_end_index = data.find(line_ending)
         message_body_start_index = data.find(line_ending+line_ending)
-        # TODO if either index is <=0 than HTTP reponse is wrong
+        if status_line_end_index <= -1 or message_body_start_index <= -1:
+            print("TODO ERROR")
+            # TODO raise an error
+        else:
+            status_line_end_index += len(line_ending)
         
         headers_data = data[status_line_end_index:message_body_start_index]
         headers_array = headers_data.split(line_ending)
