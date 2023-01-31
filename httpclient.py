@@ -78,6 +78,17 @@ class HTTPClient(object):
         # TODO Check if path is not set
         return path
 
+    def get_line_ending(self, string):
+        line_ending = ''
+        if string.find('\r\n') != -1:
+            line_ending = '\r\n'
+        elif string.find('\n') != -1:
+            line_ending = '\n'
+        elif string.find('\r') != -1:
+            line_ending = '\r'
+        # TODO if line_ending is still empty, then raise error
+        return line_ending
+
     def connect(self, host, port):
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -107,13 +118,20 @@ class HTTPClient(object):
         return code
 
     def get_headers(self, data):
-        headers = []
-        # First new line indicates end of status line
-        status_line_end_index = data.find('\n')
-        # First double new line indicates start of message body
-        message_body_start_index = data.find('\n\n')
-        headers_data = data[status_line_end_index+1:message_body_start_index]
-        return None
+        headers = {}
+        # Split headers on newline and double newline cadence
+        line_ending = self.get_line_ending(data)
+        status_line_end_index = data.find(line_ending) + len(line_ending)
+        message_body_start_index = data.find(line_ending+line_ending)
+        # TODO if either index is <=0 than HTTP reponse is wrong
+        
+        headers_data = data[status_line_end_index:message_body_start_index]
+        headers_array = headers_data.split(line_ending)
+        for header in headers_array:
+            header_array = header.split(': ') # ['Content-Length', '1234']
+            # Assign key value pair to dict
+            headers[header_array[0]] = header_array[1]
+        return headers
 
     def get_body(self, data):
         return None
