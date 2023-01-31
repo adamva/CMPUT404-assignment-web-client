@@ -51,29 +51,30 @@ class HTTPClient(object):
         Returns:
             http_request (string): A HTTP request string
         """
+        line_ending = '\r\n'
         # Create status line
-        http_request = f'{method.upper()} {path} HTTP/{version}' + '\n'
+        http_request = f'{method.upper()} {path} HTTP/{version}' + line_ending
 
         # Append headers
         if not headers.get('Host'):
             print("TODO ERROR")
         for header in headers:
-            http_request += f'{header}: {headers[header]}' + '\n'
+            http_request += f'{header}: {headers[header]}' + line_ending
 
         # Append headers if not done prior
         # Content-Length
         payload_length = len(payload.encode('utf-8'))
         if payload_length > 0 and not headers.get('Content-Length'):
-            http_request += f'Content-Length: {payload_length}' + '\n'
+            http_request += f'Content-Length: {payload_length}' + line_ending
         # User-Agent
         if not headers.get('User-Agent'):
-            http_request += 'User-Agent: discountCurl/0.0.1\n'
+            http_request += 'User-Agent: badCurl/0.0.1' + line_ending
         # Accept
         if not headers.get('Accept'):
-            http_request += 'Accept: */*\n'
+            http_request += 'Accept: */*' + line_ending
 
         # Append message body
-        http_request += '\n'
+        http_request += line_ending
         if payload:
             http_request += payload
         return http_request
@@ -238,6 +239,7 @@ class HTTPClient(object):
         # GET / HTTP/1.1\nHost: localhost\n\n
         request_headers = {'Host': server_host}
         http_request_data = self.build_http_request(path=request_path, headers=request_headers)
+        print("XX: " + repr(http_request_data))
         # Connect & send request
         self.connect(server_host, server_port)
         self.sendall(http_request_data)
@@ -280,6 +282,7 @@ if __name__ == "__main__":
         http_rsp = client.command( sys.argv[1] )
     print("RSP Code:", http_rsp.get_code())
     print("RSP Headers:", http_rsp.get_headers())
-    print("RSP Body:", http_rsp.get_body())
+    if len(http_rsp.get_body()) < 64:
+        print("RSP Body:", http_rsp.get_body())
     
 
