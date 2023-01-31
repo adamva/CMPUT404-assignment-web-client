@@ -142,7 +142,25 @@ class HTTPClient(object):
         return headers
 
     def get_body(self, data):
-        return None
+        """ Return HTTP message body from HTTP reponse data
+
+        Parameters:
+            data (string): A HTTP response string
+
+        Returns:
+            message_body (string): An string of the HTTP message body
+        """
+        message_body = ''
+        line_ending = self.get_line_ending(data)
+        message_body_start_index = data.find(line_ending+line_ending)
+        # TODO if either index is <=-1 than HTTP reponse is wrong
+        if message_body_start_index <= -1:
+            print("TODO ERROR")
+            # TODO raise an error
+        else:
+            message_body_start_index += len(line_ending)*2
+        message_body = data[message_body_start_index:]
+        return message_body
     
     def sendall(self, data):
         try:
