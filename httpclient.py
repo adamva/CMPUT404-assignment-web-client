@@ -152,15 +152,22 @@ class HTTPClient(object):
             code (int): An int of the HTTP response code
         """
         code = -1
+        code_raw = ''
         line_ending = self.get_line_ending(data)
         status_line_end_index = data.find(line_ending)
         status_line = data[0:status_line_end_index]
         split_status_line = status_line.split(' ') # ['HTTP/1.0', '200', 'OK']
         if len(split_status_line) >= 2: 
-            code = split_status_line[1]
+            code_raw = split_status_line[1]
         else:
-            raise Exception('ERR Response status line is malformed')
-        # TODO check if response code is out of band (<100 or >599)
+            raise Exception('ERR Response status line is malformed, could not find status code')
+        try:
+            code = int(code_raw)
+        except Exception as e:
+            raise Exception('ERR Response code is not a number')
+        if code < 100 or code > 599:
+            raise Exception('ERR Response code is not valid <100 or >599')
+
         return code
 
     def get_headers(self, data):
