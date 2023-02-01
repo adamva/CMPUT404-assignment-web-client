@@ -209,7 +209,7 @@ class HTTPClient(object):
             # TODO raise an error
         else:
             message_body_start_index += len(line_ending)*2
-        message_body = data[message_body_start_index:]
+        message_body = data[message_body_start_index:-1]
         return message_body
     
     def sendall(self, data):
@@ -311,9 +311,9 @@ if __name__ == "__main__":
         http_rsp = client.command( sys.argv[2], sys.argv[1] )
     else:
         http_rsp = client.command( sys.argv[1] )
-    print("RSP Code:", http_rsp.get_code())
-    print("RSP Headers:", http_rsp.get_headers())
-    if len(http_rsp.get_body()) < 64:
-        print("RSP Body:", http_rsp.get_body())
+    # print("RSP Code:", http_rsp.get_code())
+    # print("RSP Headers:", http_rsp.get_headers())
+    # if len(http_rsp.get_body()) < 64:
+    print(http_rsp.get_body())
     
 
