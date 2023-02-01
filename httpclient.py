@@ -39,17 +39,6 @@ class HTTPResponse(object):
     def get_headers(self): return self.headers
 
 class HTTPClient(object):
-    def serialize(self, data):
-        """ Return a string representation of Python dict
-
-        Parameters:
-            data (dict): Dictionary of data to serialize
-        
-        Returns:
-            data_string (string): A string representation of dict
-        """
-        data_string = urllib.parse.urlencode(data)
-        return data_string
 
     def build_http_request(self, method='GET', version='1.1', path='/', headers={}, payload=''):
         """ Return a HTTP request string
@@ -228,7 +217,7 @@ class HTTPClient(object):
             # TODO raise an error
         else:
             message_body_start_index += len(line_ending)*2
-        message_body = data[message_body_start_index:-1]
+        message_body = data[message_body_start_index:]
         return message_body
     
     def sendall(self, data):
@@ -291,7 +280,7 @@ class HTTPClient(object):
         request_headers = {'Host': server_host}
         request_payload = ''
         if args:
-            request_payload = self.serialize(args)
+            request_payload = urllib.parse.urlencode(args)
         request_headers['Content-Length'] = len(request_payload.encode('utf-8'))
         request_headers['Content-Type'] = 'application/x-www-form-urlencoded'
 
