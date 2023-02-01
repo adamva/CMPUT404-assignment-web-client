@@ -96,10 +96,9 @@ class HTTPClient(object):
         port = -1
         host = ''
         parse_result = urllib.parse.urlparse(url)
-        host_port_arr = parse_result.netloc.split(':')
-        host = host_port_arr[0]
-        if len(host_port_arr) >= 2:
-            port = int(host_port_arr[1])
+        host = parse_result.hostname
+        if parse_result.port:
+            port = parse_result.port
         elif parse_result.scheme == 'http':
             port = 80
         else:
