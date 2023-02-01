@@ -53,10 +53,6 @@ class HTTPClient(object):
             http_request (string): A HTTP request string
         """
         line_ending = '\r\n'
-        # TODO some servers want \r or \n or \r\n ... 
-        # http://slashdot.org wants \r
-        # http://softwareprocess.es/static/SoftwareProcess.es.html wants \r\n
-        # http://example.com wants \r\n or \n
         # Create status line
         http_request = f'{method.upper()} {path} HTTP/{version}' + line_ending
 
@@ -69,8 +65,11 @@ class HTTPClient(object):
         # Append headers if not done prior
         # Content-Length
         payload_length = len(payload.encode('utf-8'))
-        if payload_length > 0 and not headers.get('Content-Length'):
-            http_request += f'Content-Length: {payload_length}' + line_ending
+        if payload_length > 0:
+            if not headers.get('Content-Length'):
+                http_request += f'Content-Length: {payload_length}' + line_ending
+            if not headers.get('Content-Type'):
+                http_request += f'Content-Type: application/x-www-form-urlencoded' + line_ending
         # User-Agent
         if not headers.get('User-Agent'):
             http_request += 'User-Agent: badCurl/0.0.1' + line_ending
