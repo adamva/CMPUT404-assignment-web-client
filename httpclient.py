@@ -95,24 +95,16 @@ class HTTPClient(object):
         """
         port = -1
         host = ''
-        # Check URL for hostname and optional port
-        url_arr = url.split('/') # ['http', '', 'localhost:8080', 'index.html']
-        if len(url_arr) > 2:
-            host_port = url_arr[2] 
-            host_port_arr = host_port.split(':') # ['localhost', '8080']
-            if len(host_port_arr) > 1:
-                port = int(host_port_arr[1])
-            host = host_port_arr[0]
-    
-        # HTTP schemes have standard ports
-        if port == -1:
-            if url.startswith('http:'):
-                port = 80
-            # TODO Raise exception for https attempts
-            # elif url.startswith('https:'):
-                # port = 443
-
-        # TODO Check if host or port still are not set
+        parse_result = urllib.parse.urlparse(url)
+        host_port_arr = parse_result.netloc.split(':')
+        host = host_port_arr[0]
+        if len(host_port_arr) >= 2:
+            port = int(host_port_arr[1])
+        elif parse_result.scheme == 'http':
+            port = 80
+        else:
+            # Im not doing HTTPS
+            print("ERR TODO")
         return (host, port)
 
     def get_path(self, url):
