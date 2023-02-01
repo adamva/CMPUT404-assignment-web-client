@@ -265,9 +265,34 @@ class HTTPClient(object):
     def POST(self, url, args=None):
         code = 500
         body = ""
+        headers = {}
+        # Build HTTP request body
+        server_host, server_port = self.get_host_port(url)
+        request_path = self.get_path(url)
+        request_payload = 'x=y' #TODO get actual payload
+        request_headers = {
+            'Host': server_host, 
+            'Content-Length': len(request_payload.encode('utf-8')), 
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        http_request_data = self.build_http_request(method='POST', path=request_path, headers=request_headers, payload='x=y')
+        # Connect & send request
+        self.connect(server_host, server_port)
+        self.sendall(http_request_data)
+        time.sleep(150/1000) # Without this sleep wait, the connection becomes closed too quick before server can recognize what is happening and not give an actual HTTP reponse
+        self.socket.shutdown(socket.SHUT_WR)
+        
+        # Read response
+        http_response_data = self.recvall(self.socket)
+        if http_response_data and http_response_data.startswith('HTTP'):
+            code = self.get_code(http_response_data)
+            headers = self.get_headers(http_response_data)
+            body = self.get_body(http_response_data)
+        else:
+            print("ERR Empty or not-HTTP reply from server")
 
         self.close()
-        return HTTPResponse(code, body)
+        return HTTPResponse(code, headers, body)
 
     def command(self, url, command="GET", args=None):
         if (command == "POST"):
