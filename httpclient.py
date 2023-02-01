@@ -39,6 +39,38 @@ class HTTPResponse(object):
     def get_headers(self): return self.headers
 
 class HTTPClient(object):
+    def serialize(self, content_type='x-www-form-urlencoded', data=''):
+        """ Return a string representation of MIME type for Python dict
+
+        Parameters:
+            content_type  (string): MIME type
+            data          (dict):   Dictionary of data to serialize
+        
+        Returns:
+            data_string (string): A string representation formatted to MIME type of data
+        """
+        mime_types = {
+            'x-www-form-urlencoded': {
+                'key_value_delimiter': '&',
+                'equality_delimiter': '=',
+                'serial_start': '',
+                'serial_end': '',
+                'do_urlencode': True
+            }
+        }
+        mime_type = mime_types[content_type]
+        data_string = mime_type['serial_start']
+        for key in data:
+            data_string += key + mime_type['equality_delimiter']
+            if mime_type['do_urlencode']:
+                value = urllib.parse.quote(str(data[key]))
+            else:
+                value = str(data[key])
+            data_string += value + mime_type['key_value_delimiter']
+        data_string = data_string[:-1]
+        data_string += mime_type['serial_start']
+        return data_string
+
     def build_http_request(self, method='GET', version='1.1', path='/', headers={}, payload=''):
         """ Return a HTTP request string
 
@@ -276,13 +308,13 @@ class HTTPClient(object):
         # Build HTTP request body
         server_host, server_port = self.get_host_port(url)
         request_path = self.get_path(url)
-        request_payload = 'x=y' #TODO get actual payload
+        request_payload = self.serialize(content_type='x-www-form-urlencoded', data=args)
         request_headers = {
             'Host': server_host, 
             'Content-Length': len(request_payload.encode('utf-8')), 
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-        http_request_data = self.build_http_request(method='POST', path=request_path, headers=request_headers, payload='x=y')
+        http_request_data = self.build_http_request(method='POST', path=request_path, headers=request_headers, payload=request_payload)
         # Connect & send request
         self.connect(server_host, server_port)
         self.sendall(http_request_data)
