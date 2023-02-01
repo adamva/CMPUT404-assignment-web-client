@@ -22,6 +22,7 @@
 import sys
 import socket
 import re
+import time
 # you may use urllib to encode data appropriately
 import urllib.parse
 
@@ -242,15 +243,15 @@ class HTTPClient(object):
         server_host, server_port = self.get_host_port(url)
         request_path = self.get_path(url)
         # GET / HTTP/1.1\nHost: localhost\n\n
-        headers['Host'] = server_host
-        http_request_data = self.build_http_request(path=request_path, headers=headers)
+        req_headers = {'Host': server_host}
+        http_request_data = self.build_http_request(path=request_path, headers=req_headers)
         # Connect & send request
         self.connect(server_host, server_port)
         self.sendall(http_request_data)
+        time.sleep(150/1000) # Without this sleep wait, the connection becomes closed too quick before server can recognize what is happening and not give an actual HTTP reponse
         self.socket.shutdown(socket.SHUT_WR)
         
         # Read response
-        # TODO Response is empty when trying www.google.com
         http_response_data = self.recvall(self.socket)
         if http_response_data and http_response_data.startswith('HTTP'):
             code = self.get_code(http_response_data)
