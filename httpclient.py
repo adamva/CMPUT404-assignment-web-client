@@ -90,26 +90,39 @@ class HTTPClient(object):
             http_request += payload
         return http_request
 
-    def check_url(self, urllib_parse):
-        """ Validate a urllib.parse.ParseResult for correctness in scheme, host, port, and path
+    def check_url(self, url):
+        """ Validate a URL string for correctness
+            Raise an error if URL is invalid
+
+        Parameters:
+            url (string): A URL
+        """
+        if not url:
+            raise ValueError(self.error_code_messages[3])
+        elif len(url) > 2048:
+            raise ValueError(self.error_code_messages[3])
+        elif url and re.search(' ', url):
+            raise ValueError(self.error_code_messages[3])
+
+    def check_url_params(self, urllib_parse):
+        """ Validate a urllib.parse.ParseResult for correctness in scheme, host, and port
             Raise an error if URL is invalid
 
         Parameters:
             urllib_parse (dict): A urllib.parse.ParseResult
         """
-        # Validate scheme & hostname
+        # Only serve http requests, im not doing https
         if not urllib_parse.scheme:
             raise ValueError(self.error_code_messages[3])
         elif urllib_parse.scheme != 'http':
             raise ValueError(self.error_code_messages[1] % urllib_parse.scheme)
         elif not urllib_parse.hostname:
             raise ValueError(self.error_code_messages[3])
-        # Hostname should only be 253 of alphanumeric, dots, or hyphens
+        # Hostname should only be alphanumeric, dots, or hyphens
         elif len(urllib_parse.hostname) != len(re.match('[a-zA-Z0-9.-]+', urllib_parse.hostname).group()):
             raise ValueError(self.error_code_messages[3])
         elif len(urllib_parse.hostname) > 253:
             raise ValueError(self.error_code_messages[3])
-        # Validate port
         # urllib.parse.ParseResult doesn't have a clean way to check port
         elif not urllib_parse.__contains__('port'):
             try:
@@ -238,25 +251,27 @@ class HTTPClient(object):
         return buffer.decode('utf-8')
 
     def do_request(self, method, url, args=None):
-        code = 500; body = ""; headers = {}
-        # Build HTTP request body
+        code = 500; body = ""; headers = {}; error_code = 0
+        # Validate input URL string
+        try:
+            url_check = self.check_url(url)
+        except Exception as e:
+            print(f'badCurl: (3)', e)
+            sys.exit(3)
+
         # Validate input URL params
-        if len(url) > 2048:
-            error_code = 3
-            print(f'badCurl: ({error_code}) ' + {self.error_code_messages[error_code]})
-            sys.exit(error_code)
         try:
             url_parse = urllib.parse.urlparse(url)
         except AttributeError as e:
             print(f'badCurl: ({e.errno}) {e.strerror}')
             sys.exit(e.errno)
-
         try:
-            url_check = self.check_url(url_parse)
+            url_param_check = self.check_url_params(url_parse)
         except Exception as e:
-            print('badCurl: (2)', e)
-            sys.exit(2)
+            print('badCurl: (3)', e)
+            sys.exit(3)
 
+        # Build HTTP Request pieces
         server_host = url_parse.hostname
         server_port = url_parse.port if url_parse.port else 80
         request_headers = {
@@ -269,7 +284,7 @@ class HTTPClient(object):
         if url_parse.path:
             request_path = url_parse.path + '?' + url_parse.query
 
-        # URL encode a payload if given
+        # Only support x-www-form-urlencoded request payloads
         request_payload = ''
         if args:
             request_payload = urllib.parse.urlencode(args)
@@ -286,9 +301,9 @@ class HTTPClient(object):
             self.sendall(http_request_data)
             self.socket.shutdown(socket.SHUT_WR)
         except Exception as e:
-            print('badCurl: (1)', e)
+            print('badCurl: (6)', e)
             self.socket.close()
-            sys.exit(1)
+            sys.exit(6)
         
         # Read response
         http_response_data = self.recvall(self.socket)
@@ -302,7 +317,7 @@ class HTTPClient(object):
                 headers = self.get_headers(http_response_data)
                 body = self.get_body(http_response_data)
             except Exception as e:
-                print('badCurl: (1)', e)
+                print('badCurl: (6)', e)
 
         self.socket.close()
         return HTTPResponse(code, headers, body)
