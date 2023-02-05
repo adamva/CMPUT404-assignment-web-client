@@ -40,6 +40,12 @@ class HTTPResponse(object):
 
 class HTTPClient(object):
 
+    def __init__(self):
+        self.error_code_messages = {
+            '1': 'Protocol %s not suported',
+            '3': 'URL using bad/illegal format or missing URL'
+        }
+
     def build_http_request(self, method='GET', version='1.1', path='/', headers={}, payload=''):
         """ Return a HTTP request string
 
@@ -84,27 +90,20 @@ class HTTPClient(object):
             http_request += payload
         return http_request
 
-    def get_host_port(self, url):
-        """ Return the hostname and port from a URL string
+    def check_url(self, urllib_parse):
+        code = 0; message = ''
+        if not urllib_parse.scheme:
+            code = 3; message = self.error_code_messages[str(code)]
+        elif urllib_parse.scheme != 'http':
+            code = 1; message = self.error_code_messages[str(code)] % urllib_parse.scheme
+        elif not urllib_parse.hostname:
+            code = 3; message = self.error_code_messages[str(code)]
+        # Hostname should only be alphanumeric, dots, or hyphens
+        elif len(urllib_parse.hostname) != len(re.match('[a-zA-Z0-9.-]+', urllib_parse.hostname).group()):
+            code = 3; message = self.error_code_messages[str(code)]
 
-        Parameters:
-            url (string): A HTTP URL string
-        
-        Returns:
-            (host, port) (tuple): A tuple containing the host and port
-        """
-        port = -1
-        host = ''
-        parse_result = urllib.parse.urlparse(url)
-        host = parse_result.hostname
-        if parse_result.port:
-            port = parse_result.port
-        elif parse_result.scheme == 'http':
-            port = 80
-        else:
-            # Im not doing HTTPS
-            print("ERR TODO")
-        return (host, port)
+        if code != 0:
+            return (code, message)
 
     def get_path(self, url):
         path = '/'
@@ -222,7 +221,6 @@ class HTTPClient(object):
     def close(self):
         self.socket.close()
 
-    # read everything from the socket
     def recvall(self, sock):
         buffer = bytearray()
         done = False
@@ -234,49 +232,48 @@ class HTTPClient(object):
                 done = not part
         return buffer.decode('utf-8')
 
-    def GET(self, url, args=None):
+    def do_request(self, method, url, args=None):
         code = 500; body = ""; headers = {}
         # Build HTTP request body
-        server_host, server_port = self.get_host_port(url)
-        request_path = self.get_path(url)
-        # GET / HTTP/1.1\nHost: localhost\n\n
-        req_headers = {'Host': server_host}
-        http_request_data = self.build_http_request(path=request_path, headers=req_headers)
-        # Connect & send request
-        self.connect(server_host, server_port)
-        self.sendall(http_request_data)
-        time.sleep(150/1000) # Without this sleep wait, the connection becomes closed too quick before server can recognize what is happening and not give an actual HTTP reponse
-        self.socket.shutdown(socket.SHUT_WR)
-        
-        # Read response
-        http_response_data = self.recvall(self.socket)
-        if http_response_data and http_response_data.startswith('HTTP'):
-            code = self.get_code(http_response_data)
-            headers = self.get_headers(http_response_data)
-            body = self.get_body(http_response_data)
-        else:
-            print("ERR Empty or not-HTTP reply from server")
+        # Validate input URL params
+        try:
+            url_parse = urllib.parse.urlparse(url)
+        except AttributeError as e:
+            print(f'httpclient: ({e.errno}) {e.strerror}')
+            sys.exit(e.errno)
 
-        self.close()
-        return HTTPResponse(code, headers, body)
+        url_check = self.check_url(url_parse)
+        if url_check:
+            print(f'httpclient: ({url_check[0]}) {url_check[1]}')
+            sys.exit(url_check[0])
 
-    def POST(self, url, args=None):
-        code = 500; body = ""; headers = {}
-        # Build HTTP request body
-        server_host, server_port = self.get_host_port(url)
-        request_path = self.get_path(url)
-        request_headers = {'Host': server_host}
+        server_host = url_parse.hostname
+        server_port = url_parse.port if url_parse.port else 80
+        request_headers = {
+            'Host': server_host,
+            'Content-Length': 0,
+            'Content-Type': 'application/octet-stream'
+        }
+    
+        request_path =  '/'
+        if url_parse.path:
+            request_path = url_parse.path + '?' + url_parse.query
+
+        # URL encode a payload if given
         request_payload = ''
         if args:
             request_payload = urllib.parse.urlencode(args)
-        request_headers['Content-Length'] = len(request_payload.encode('utf-8'))
-        request_headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            request_headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        if method == 'POST':
+            request_headers['Content-Length'] = len(request_payload.encode('utf-8'))
 
-        http_request_data = self.build_http_request(method='POST', path=request_path, headers=request_headers, payload=request_payload)
+        http_request_data = self.build_http_request(method=method, path=request_path, headers=request_headers, payload=request_payload)
+        # print(repr(http_request_data)) # print literal string chars
+
         # Connect & send request
         self.connect(server_host, server_port)
         self.sendall(http_request_data)
-        time.sleep(150/1000) # Without this sleep wait, the connection becomes closed too quick before server can recognize what is happening and not give an actual HTTP reponse
+        time.sleep(150/1000) # Was getting an empty reply from server if I did not wait after sending HTTP request 
         self.socket.shutdown(socket.SHUT_WR)
         
         # Read response
@@ -290,6 +287,12 @@ class HTTPClient(object):
 
         self.close()
         return HTTPResponse(code, headers, body)
+
+    def GET(self, url, args=None):
+        return self.do_request('GET', url, args)
+
+    def POST(self, url, args=None):
+        return self.do_request('POST', url, args)
 
     def command(self, url, command="GET", args=None):
         if (command == "POST"):
