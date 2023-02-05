@@ -42,8 +42,10 @@ class HTTPClient(object):
 
     def __init__(self):
         self.error_code_messages = {
-            '1': 'Protocol %s not suported',
-            '3': 'URL using bad/illegal format or missing URL'
+            1: 'Protocol %s not suported',
+            3: 'URL using bad/illegal format or missing URL',
+            6: 'Bad response from server',
+            52: 'Empty reply from server'
         }
 
     def build_http_request(self, method='GET', version='1.1', path='/', headers={}, payload=''):
@@ -93,14 +95,14 @@ class HTTPClient(object):
     def check_url(self, urllib_parse):
         code = 0; message = ''
         if not urllib_parse.scheme:
-            code = 3; message = self.error_code_messages[str(code)]
+            code = 3; message = self.error_code_messages[code]
         elif urllib_parse.scheme != 'http':
-            code = 1; message = self.error_code_messages[str(code)] % urllib_parse.scheme
+            code = 1; message = self.error_code_messages[code] % urllib_parse.scheme
         elif not urllib_parse.hostname:
-            code = 3; message = self.error_code_messages[str(code)]
+            code = 3; message = self.error_code_messages[code]
         # Hostname should only be alphanumeric, dots, or hyphens
         elif len(urllib_parse.hostname) != len(re.match('[a-zA-Z0-9.-]+', urllib_parse.hostname).group()):
-            code = 3; message = self.error_code_messages[str(code)]
+            code = 3; message = self.error_code_messages[code]
 
         if code != 0:
             return (code, message)
@@ -130,7 +132,7 @@ class HTTPClient(object):
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((host, port))
         except socket.error as e:
-            print(f'httpclient: ({e.errno}) {e.strerror}')
+            print(f'badCurl: ({e.errno}) {e.strerror}')
             sys.exit(e.errno)
         return None
 
@@ -217,9 +219,6 @@ class HTTPClient(object):
         except socket.error as e:
             raise e
         return None
-        
-    def close(self):
-        self.socket.close()
 
     def recvall(self, sock):
         buffer = bytearray()
@@ -239,12 +238,12 @@ class HTTPClient(object):
         try:
             url_parse = urllib.parse.urlparse(url)
         except AttributeError as e:
-            print(f'httpclient: ({e.errno}) {e.strerror}')
+            print(f'badCurl: ({e.errno}) {e.strerror}')
             sys.exit(e.errno)
 
         url_check = self.check_url(url_parse)
         if url_check:
-            print(f'httpclient: ({url_check[0]}) {url_check[1]}')
+            print(f'badCurl: ({url_check[0]}) {url_check[1]}')
             sys.exit(url_check[0])
 
         server_host = url_parse.hostname
@@ -278,14 +277,16 @@ class HTTPClient(object):
         
         # Read response
         http_response_data = self.recvall(self.socket)
-        if http_response_data and http_response_data.startswith('HTTP'):
+        if not http_response_data:
+            print('badCurl: (52) ' + self.error_code_messages[52])
+        elif not http_response_data.startswith('HTTP'):
+            print('badCurl: (6) ' + self.error_code_messages[6])
+        else:
             code = self.get_code(http_response_data)
             headers = self.get_headers(http_response_data)
             body = self.get_body(http_response_data)
-        else:
-            print("ERR Empty or not-HTTP reply from server")
 
-        self.close()
+        self.socket.close()
         return HTTPResponse(code, headers, body)
 
     def GET(self, url, args=None):
@@ -314,6 +315,7 @@ if __name__ == "__main__":
     # print("RSP Code:", http_rsp.get_code())
     # print("RSP Headers:", http_rsp.get_headers())
     # if len(http_rsp.get_body()) < 64:
-    print(http_rsp.get_body())
+    if http_rsp.get_body():
+        print(http_rsp.get_body())
     
 
