@@ -216,6 +216,7 @@ class HTTPClient(object):
     def sendall(self, data):
         try:
             self.socket.sendall(data.encode('utf-8'))
+            time.sleep(150/1000) # Was getting an empty reply from server if I did not wait after sending HTTP request 
         except socket.error as e:
             raise
         return None
@@ -273,7 +274,6 @@ class HTTPClient(object):
         try:
             self.connect(server_host, server_port)
             self.sendall(http_request_data)
-            time.sleep(150/1000) # Was getting an empty reply from server if I did not wait after sending HTTP request 
             self.socket.shutdown(socket.SHUT_WR)
         except Exception as e:
             print('badCurl: (1)', e)
