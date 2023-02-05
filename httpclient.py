@@ -289,6 +289,7 @@ class HTTPClient(object):
         if args:
             request_payload = urllib.parse.urlencode(args)
             request_headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            request_headers['Content-Length'] = len(request_payload.encode('utf-8'))
         if method == 'POST':
             request_headers['Content-Length'] = len(request_payload.encode('utf-8'))
 
