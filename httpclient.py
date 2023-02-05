@@ -131,7 +131,8 @@ class HTTPClient(object):
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((host, port))
         except socket.error as e:
-            raise e
+            print(f'httpclient: ({e.errno}) {e.strerror}')
+            sys.exit(e.errno)
         return None
 
     def get_code(self, data):
@@ -234,9 +235,7 @@ class HTTPClient(object):
         return buffer.decode('utf-8')
 
     def GET(self, url, args=None):
-        code = 500
-        body = ""
-        headers = {}
+        code = 500; body = ""; headers = {}
         # Build HTTP request body
         server_host, server_port = self.get_host_port(url)
         request_path = self.get_path(url)
@@ -262,9 +261,7 @@ class HTTPClient(object):
         return HTTPResponse(code, headers, body)
 
     def POST(self, url, args=None):
-        code = 500
-        body = ""
-        headers = {}
+        code = 500; body = ""; headers = {}
         # Build HTTP request body
         server_host, server_port = self.get_host_port(url)
         request_path = self.get_path(url)
