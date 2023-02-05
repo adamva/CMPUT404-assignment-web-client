@@ -42,7 +42,7 @@ class HTTPClient(object):
 
     def __init__(self):
         self.error_code_messages = {
-            1: 'Protocol %s not suported',
+            1: 'Protocol %s not supported',
             3: 'URL using bad/illegal format or missing URL',
             6: 'Bad response from server',
             52: 'Empty reply from server'
@@ -145,22 +145,27 @@ class HTTPClient(object):
         Returns:
             code (int): An int of the HTTP response code
         """
-        code = -1
-        code_raw = ''
+        code = -1; code_raw = ''
+
+        # Split the response status line goodies
         line_ending = self.get_line_ending(data)
         status_line_end_index = data.find(line_ending)
         status_line = data[0:status_line_end_index]
         split_status_line = status_line.split(' ') # ['HTTP/1.0', '200', 'OK']
+        # Check parse array gave minimum values
         if len(split_status_line) >= 2: 
             code_raw = split_status_line[1]
         else:
-            raise Exception('ERR Response status line is malformed, could not find status code')
+            raise Exception('Could not find status code in response status line')
+        
+        # Code comes as string so make it an int
         try:
             code = int(code_raw)
-        except Exception as e:
-            raise Exception('ERR Response code is not a number')
+        except ValueError as e:
+            raise
+
         if code < 100 or code > 599:
-            raise Exception('ERR Response code is not valid <100 or >599')
+            raise ValueError(f'Response code is out of range {code}')
 
         return code
 
@@ -179,8 +184,7 @@ class HTTPClient(object):
         status_line_end_index = data.find(line_ending)
         message_body_start_index = data.find(line_ending+line_ending)
         if status_line_end_index <= -1 or message_body_start_index <= -1:
-            print("TODO ERROR")
-            # TODO raise an error
+            raise ValueError('Response headers are malformed or missing')
         else:
             status_line_end_index += len(line_ending)
         
@@ -204,11 +208,10 @@ class HTTPClient(object):
         message_body = ''
         line_ending = self.get_line_ending(data)
         message_body_start_index = data.find(line_ending+line_ending)
-        # TODO if either index is <=-1 than HTTP reponse is wrong
         if message_body_start_index <= -1:
-            print("TODO ERROR")
-            # TODO raise an error
+            raise ValueError('Could not determine response body')
         else:
+            # Skip the first two newlines
             message_body_start_index += len(line_ending)*2
         message_body = data[message_body_start_index:]
         return message_body
@@ -282,9 +285,12 @@ class HTTPClient(object):
         elif not http_response_data.startswith('HTTP'):
             print('badCurl: (6) ' + self.error_code_messages[6])
         else:
-            code = self.get_code(http_response_data)
-            headers = self.get_headers(http_response_data)
-            body = self.get_body(http_response_data)
+            try:
+                code = self.get_code(http_response_data)
+                headers = self.get_headers(http_response_data)
+                body = self.get_body(http_response_data)
+            except Exception as e:
+                print('badCurl: (1)', e)
 
         self.socket.close()
         return HTTPResponse(code, headers, body)
