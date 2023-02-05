@@ -91,28 +91,33 @@ class HTTPClient(object):
         return http_request
 
     def check_url(self, urllib_parse):
-        code = 0; message = ''
+        """ Validate a urllib.parse.ParseResult for correctness in scheme, host, port, and path
+            Raise an error if URL is invalid
+
+        Parameters:
+            urllib_parse (dict): A urllib.parse.ParseResult
+        """
+        # Validate scheme & hostname
         if not urllib_parse.scheme:
-            code = 3; message = self.error_code_messages[code]
+            raise ValueError(self.error_code_messages[3])
         elif urllib_parse.scheme != 'http':
-            code = 1; message = self.error_code_messages[code] % urllib_parse.scheme
+            raise ValueError(self.error_code_messages[1] % urllib_parse.scheme)
         elif not urllib_parse.hostname:
-            code = 3; message = self.error_code_messages[code]
-        # Hostname should only be alphanumeric, dots, or hyphens
+            raise ValueError(self.error_code_messages[3])
+        # Hostname should only be 253 of alphanumeric, dots, or hyphens
         elif len(urllib_parse.hostname) != len(re.match('[a-zA-Z0-9.-]+', urllib_parse.hostname).group()):
-            code = 3; message = self.error_code_messages[code]
-
-        if code != 0:
-            return (code, message)
-
-    def get_path(self, url):
-        path = '/'
-        url_arr = url.split('/') # ['http', '', 'localhost:8080', 'index.html']
-        if len(url_arr) > 3:
-            path += '/'.join(url_arr[3:])
-        
-        # TODO Check if path is not set
-        return path
+            raise ValueError(self.error_code_messages[3])
+        elif len(urllib_parse.hostname) > 253:
+            raise ValueError(self.error_code_messages[3])
+        # Validate port
+        # urllib.parse.ParseResult doesn't have a clean way to check port
+        elif not urllib_parse.__contains__('port'):
+            try:
+                port = urllib_parse.port
+                if port and port > 65535:
+                    raise ValueError(self.error_code_messages[3])
+            except Exception as e:
+                raise ValueError(self.error_code_messages[3])
 
     def get_line_ending(self, string):
         line_ending = ''
@@ -153,7 +158,7 @@ class HTTPClient(object):
         if len(split_status_line) >= 2: 
             code_raw = split_status_line[1]
         else:
-            raise Exception('Could not find status code in response status line')
+            raise ValueError('Could not find status code in response status line')
         
         # Code comes as string so make it an int
         try:
@@ -236,16 +241,21 @@ class HTTPClient(object):
         code = 500; body = ""; headers = {}
         # Build HTTP request body
         # Validate input URL params
+        if len(url) > 2048:
+            error_code = 3
+            print(f'badCurl: ({error_code}) ' + {self.error_code_messages[error_code]})
+            sys.exit(error_code)
         try:
             url_parse = urllib.parse.urlparse(url)
         except AttributeError as e:
             print(f'badCurl: ({e.errno}) {e.strerror}')
             sys.exit(e.errno)
 
-        url_check = self.check_url(url_parse)
-        if url_check:
-            print(f'badCurl: ({url_check[0]}) {url_check[1]}')
-            sys.exit(url_check[0])
+        try:
+            url_check = self.check_url(url_parse)
+        except Exception as e:
+            print('badCurl: (2)', e)
+            sys.exit(2)
 
         server_host = url_parse.hostname
         server_port = url_parse.port if url_parse.port else 80
