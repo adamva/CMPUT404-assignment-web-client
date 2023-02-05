@@ -66,8 +66,6 @@ class HTTPClient(object):
         http_request = f'{method.upper()} {path} HTTP/{version}' + line_ending
 
         # Append headers
-        if not headers.get('Host'):
-            print("TODO ERROR")
         for header in headers:
             http_request += f'{header}: {headers[header]}' + line_ending
 
@@ -132,8 +130,7 @@ class HTTPClient(object):
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((host, port))
         except socket.error as e:
-            print(f'badCurl: ({e.errno}) {e.strerror}')
-            sys.exit(e.errno)
+            raise            
         return None
 
     def get_code(self, data):
@@ -220,7 +217,7 @@ class HTTPClient(object):
         try:
             self.socket.sendall(data.encode('utf-8'))
         except socket.error as e:
-            raise e
+            raise
         return None
 
     def recvall(self, sock):
@@ -273,10 +270,15 @@ class HTTPClient(object):
         # print(repr(http_request_data)) # print literal string chars
 
         # Connect & send request
-        self.connect(server_host, server_port)
-        self.sendall(http_request_data)
-        time.sleep(150/1000) # Was getting an empty reply from server if I did not wait after sending HTTP request 
-        self.socket.shutdown(socket.SHUT_WR)
+        try:
+            self.connect(server_host, server_port)
+            self.sendall(http_request_data)
+            time.sleep(150/1000) # Was getting an empty reply from server if I did not wait after sending HTTP request 
+            self.socket.shutdown(socket.SHUT_WR)
+        except Exception as e:
+            print('badCurl: (1)', e)
+            self.socket.close()
+            sys.exit(1)
         
         # Read response
         http_response_data = self.recvall(self.socket)
