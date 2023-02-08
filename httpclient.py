@@ -279,19 +279,28 @@ class HTTPClient(object):
             'Content-Length': 0,
             'Content-Type': 'application/octet-stream'
         }
-    
-        request_path =  '/'
-        if url_parse.path:
-            request_path = url_parse.path + '?' + url_parse.query
 
+        request_path = url_parse.path if url_parse.path else '/'
+        request_query = url_parse.query if url_parse.query else ''
+
+        # Determine usage of args -- GET is query params, POST is payload
         # Only support x-www-form-urlencoded request payloads
         request_payload = ''
+        encode_args = ''
         if args:
-            request_payload = urllib.parse.urlencode(args)
+            try: 
+                encode_args = urllib.parse.urlencode(args)
+            except Exception as e:
+                print('badCurl: (3)', e)
+                sys.exit(3)
+        if method == 'POST' and encode_args:
+            request_payload = encode_args
             request_headers['Content-Type'] = 'application/x-www-form-urlencoded'
-            request_headers['Content-Length'] = len(request_payload.encode('utf-8'))
-        if method == 'POST':
-            request_headers['Content-Length'] = len(request_payload.encode('utf-8'))
+            request_headers['Content-Length'] = len(encode_args.encode('utf-8'))
+        if method == 'GET' and encode_args:
+            request_query = (request_query + '&' + encode_args) if request_query else encode_args
+            
+        request_path = (request_path + '?' + request_query) if request_query else request_path
 
         http_request_data = self.build_http_request(method=method, path=request_path, headers=request_headers, payload=request_payload)
         # print(repr(http_request_data)) # print literal string chars
